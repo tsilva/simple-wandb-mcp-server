@@ -46,8 +46,12 @@ async def list_project_metrics(entity: str, project_name: str) -> str:
         runs = api.runs(path=f"{entity}/{project_name}")
         metrics = set()
         for run in runs:
-            history = run.history(samples=1)
-            metrics.update([c for c in history.columns if not c.startswith("_")])
+            # Run.history can return a DataFrame if pandas is installed, or a
+            # list of dicts otherwise. Use pandas=False to ensure a consistent
+            # list-of-dicts format so we can reliably extract metric names.
+            history_rows = run.history(samples=1, pandas=False)
+            if history_rows:
+                metrics.update([k for k in history_rows[0].keys() if not k.startswith("_")])
 
         return "\n".join(sorted(metrics)) or f"No metrics found in '{project_name}'."
     except Exception as e:
